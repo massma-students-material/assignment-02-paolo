@@ -1,13 +1,4 @@
-Signal,key,event,eventChannel,name,description,domain,interval,dataType,unitsType,displayRes,
-f1,s1,1,1,/Channel/!SGA/cmdProgPos [u1  1],Programmed position  desired value,NCU_1,0.004000000000000,double,posn,5,
-f2,s2,1,1,/Channel/!SGA/cmdProgPos [u1  2],Programmed position  desired value,NCU_1,0.004000000000000,double,posn,5,
-f3,s3,1,1,/Channel/!SGA/cmdProgPos [u1  3],Programmed position  desired value,NCU_1,0.004000000000000,double,posn,5,
-f4,s4,1,1,/Channel/!SEMA/measPos1 [u1  1],Actual value of position  encoder 1,NCU_1,0.004000000000000,double,posn,5,
-f5,s5,1,1,/Channel/!SEMA/measPos1 [u1  2],Actual value of position  encoder 1,NCU_1,0.004000000000000,double,posn,5,
-f6,s6,1,1,/Channel/!SEMA/measPos1 [u1  3],Actual value of position  encoder 1,NCU_1,0.004000000000000,double,posn,5,
-f7,s11,1,1,/Nck/!SD/nckServoDataActPower64 [u1  4],Active power (64 bit),NCU_1,0.004000000000000,double,none,5,
-,
-time,f1\s1,f2\s2,f3\s3,f4\s4,f5\s5,f6\s6,f7\s11,
+time_s,programmed_x_mm,programmed_y_mm,programmed_z_mm,measured_x_mm,measured_y_mm,measured_z_mm,active_power
 0.000000,-40.000000000000000,-20.000000000000000,50.000000000000000,-319.872270000000015,-292.170149999999978,-139.272099999999995,0.000000000000000
 0.004000,-40.000000000000000,-20.000000000000000,50.000000000000000,-319.872270000000015,-292.170149999999978,-139.272099999999995,0.000000000000000
 0.008000,-40.000000000000000,-20.000000000000000,50.000000000000000,-319.872250000000008,-292.170149999999978,-139.272089999999992,0.000000000000000

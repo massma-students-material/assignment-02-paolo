@@ -27,3 +27,14 @@ What is requested to do:
 Using the assignment's nominal 4 mm diameter, the calculated spindle speed is `n = 1000 × 80 / (π × 4) ≈ 6,366 rpm` and the nominal contour feed is `v_f = 0.050 × 3 × n ≈ 955 mm/min` (15.92 mm/s).
 
 Sources are the [Assignment 2 brief](https://open.insa-toulouse.fr/mod/assign/view.php?id=28208), the [course slides](https://open.insa-toulouse.fr/mod/resource/view.php?id=32143) (slides 3, 4 and 8), and the [CNC program](data/5ASM.MPF).
+
+## Trace data
+
+The two CSV files record the CNC signals at 4 ms intervals (250 Hz). Each row contains one sample. The [milling trace](data/5ASM26_milling.csv) records the run with material removal. The [no-material-removal trace](data/5ASM26_No_material_Removal.csv) records the comparison run. Time starts at zero independently in each recording.
+
+| CSV columns | Original signals | Description |
+| --- | --- | --- |
+| `time_s` | `time` | Elapsed time since the start of the trace, in seconds. |
+| `programmed_x_mm`, `programmed_y_mm`, `programmed_z_mm` | `s1`, `s2`, `s3` | Commanded X, Y and Z positions in the G55 workpiece frame, in millimetres. |
+| `measured_x_mm`, `measured_y_mm`, `measured_z_mm` | `s4`, `s5`, `s6` | Encoder 1 feedback for X, Y and Z in machine coordinates, in millimetres. Apply the G55 offset and the Z tool-length correction before comparing these values with the commanded positions. |
+| `active_power` | `s11` | Active power reported for drive channel 4, in watts (W). |
