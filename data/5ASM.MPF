@@ -1,0 +1,29 @@
+N10 E_HEAD(272113663,,,0,70,63,-8,71,17,5,50,0,1,20,,2,4,6,100,1,0,33279);*RO*
+N11 $AN_SLTRACE=2
+N20 E_CON("C",1,"E_LAB_A_C","E_LAB_E_C");*RO*
+N30 E_MI_CON("FR_2T_D4","",1,0.05,2,80,2,66,0,90,-2,90,2,0,0,4,,40,0,5,0.05,0,7.9,16.6,91,,);*RO*
+N40 $AN_SLTRACE=1
+E_END(0,1,0);*RO*
+M30 ;#SM;*RO*
+E_LAB_A_C: ;#SM Z:8
+;#7__DlgK contour definition begin - Don't change!;*GP*;*RO*;*HD*
+G17 G90 DIAMOF;*GP*
+G0 X-40 Y-20 ;*GP*
+G1 X-10 ;*GP*
+X10 Y0 ;*GP*
+X-10 Y10 ;*GP*
+X-20 ;*GP*
+Y-10 ;*GP*
+G2 X-30 Y0 I=AC(-20) J=AC(0) ;*GP*
+G1 X-50 ;*GP*
+;CON,0,0.0000,0,0,MST:0,0,AX:X,Y,I,J,TRANS:1;*GP*;*RO*;*HD*
+;S,EX:-40,EY:-20;*GP*;*RO*;*HD*
+;LR,EX:-10;*GP*;*RO*;*HD*
+;LA,DEX:20,DEY:20;*GP*;*RO*;*HD*
+;LA,DEX:-20,DEY:10;*GP*;*RO*;*HD*
+;LL,DEX:-10;*GP*;*RO*;*HD*
+;LD,DEY:-20;*GP*;*RO*;*HD*
+;ACW,DIA:0/235,DEX:-10,DEY:10,RAD:10;*GP*;*RO*;*HD*
+;LL,EX:-50;*GP*;*RO*;*HD*
+;#End contour definition end - Don't change!;*GP*;*RO*;*HD*
+E_LAB_E_C:
