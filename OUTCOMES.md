@@ -55,4 +55,45 @@ The time panels use each run's own milling start and the nominal timeline
 $t=s/V_f$.
 
 Run `python3 feed_velocity.py` from this directory to regenerate the
-[velocity CSV](outputs/feed_velocity.csv) and [2×2 comparison figure](plots/feed_velocity.png).
+[velocity CSV](outputs/feed_velocity.csv), [2×2 velocity comparison](plots/feed_velocity.png),
+and [contour distance vs. time](plots/curvilinear_coordinate_vs_time.png).
+
+## Point 3
+
+The encoder records the spindle reference in machine coordinates. The tool tip
+is 184.970 mm below that reference along Z. The G55 offset locates the workpiece
+origin `O_P` in machine coordinates. Using the offset and tool length from
+[slide 8](assets/Assignment%202%20-%20Slides.pdf#page=8), the conversion to
+`workpiece coord.` is
+
+$$
+\begin{aligned}
+\mathbf{p}_{\mathrm{piece}}
+&= \mathbf{p}_{\mathrm{encoder}} - \mathbf{G55} - (0,0,D_1) \\
+&= \mathbf{p}_{\mathrm{encoder}} + (279.872,\ 272.170,\ 189.274)\ \mathrm{mm}.
+\end{aligned}
+$$
+
+![Side view of the machine origin, G55 workpiece origin, spindle gauge line, and tool tip at the workpiece surface](assets/massma-point-3-tool-length-origins.png)
+
+The final material-removal sample at **44.432 s** is a check against the
+programmed retract position. All positions and corrections are in mm.
+
+| Axis | Encoder machine coord. | Correction | Measured workpiece coord. | Programmed workpiece coord. |
+| --- | ---: | ---: | ---: | ---: |
+| X | −319.87229 | +279.872 | −40.00029 | −40.000 |
+| Y | −292.17017 | +272.170 | −20.00017 | −20.000 |
+| Z | −139.27193 | +189.274 | +50.00207 | +50.000 |
+
+The [converted recordings](outputs/workpiece_coordinates.csv) contain
+11,109 samples with material removal and 3,932 without. The
+[position-versus-time figure](plots/coordinates_vs_time.png) shows the
+converted encoder positions and programmed targets, with a Z detail of each
+plunge. The [3D figure](plots/trajectory_3d_origins.png) shows the
+material-removal toolpath, with the dashed line joining the machine origin
+`O_M` to the workpiece origin `O_P`.
+
+The encoder Z approaches the programmed −2 mm depth in both runs. The Task 3
+milling start is the first interpolated crossing of **−1.990 mm** during the
+plunge. This gives **30.959 s** with material removal and **5.170 s** without.
+Both runs have seven milling blocks.

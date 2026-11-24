@@ -51,3 +51,19 @@ vx_comm&vx_enc vs t, vy_comm&vy_enc vs t
 where `s` is cumulative curvilinear distance.
 
 Present briefly in the [outcomes file](./OUTCOMES.md) the calculations and results.
+
+## Task 3 - third point: reference system conversion
+
+Convert the recordings from `machine coordinates` to `workpiece coords.`.
+
+* Machine Origin offset: $\bar{P}_{MO} = (X_{MO}, Y_{MO}, Z_{MO})$; `G55` work offset
+* Tool length: $\bar{D}_1 = (0,0,D_1)$
+
+So the convertion will be:
+$$
+\bar{P}_{WP} = \bar{P}_{M} - \bar{P}_{MO} - \bar{D}_1
+$$
+
+Generare a new `csv` file containing the recordings in the new reference system.
+
+Present the calculation and the results in [outcomes file](./OUTCOMES.md). Draw a plot for each position component versus time, distinguishing for machining and non-machining. Draw a 3D plot of the machining, indicating the Machine and Workpiece origin, using the standart notation for them.

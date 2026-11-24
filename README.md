@@ -22,7 +22,7 @@ What is requested to do:
 | Milling direction | Down-cut (climb milling). The path-milling cycle is set to run backward along the defined contour. |
 | Approach and retract | Vertical, with a 50 mm retraction plane and a 5 mm safety distance |
 | Work offset `G55` (machine coordinates) | X = −279.872 mm, Y = −272.170 mm, Z = −374.244 mm |
-| Tool length in Z (`D1`) | 184.978 mm |
+| Tool length in Z (`D1`) | 184.970 mm for Task 3 (slide 8). The historical analysis used 184.978 mm. |
 
 Using the assignment's nominal 4 mm diameter, the calculated spindle speed is `n = 1000 × 80 / (π × 4) ≈ 6,366 rpm` and the nominal contour feed is `v_f = 0.050 × 3 × n ≈ 955 mm/min` (15.92 mm/s).
 
@@ -45,7 +45,8 @@ Run `python3 plot_traces.py` with Python 3.10+, NumPy and Matplotlib 3.7+ to gen
 [machining_intervals.csv](outputs/machining_intervals.csv) and refresh the plots. Each CSV
 row gives the start, end and duration of one phase in its own recording. The
 milling rows also give the contour block number, motion type and programmed
-target in G55.
+target in G55. The interval CSV and the paired 3D figure use the historical
+184.978 mm tool length and the exact −2 mm depth crossing.
 
 1. **Positioning** covers the initial recording and the approach to the surface.
 2. **Drilling (plunge)** starts when the encoder Z crosses the workpiece surface
@@ -66,5 +67,17 @@ when calculating the signs of the X and Y feed-velocity components.
 
 Encoder crossing times are linearly interpolated between the 4 ms samples after
 applying G55 and the Z tool-length correction. Physical cutter contact would
-require separate evidence. The numbers 1, 2 and 3 in the plots mark the starts
-of drilling, milling and disengagement, respectively.
+require separate evidence. The paired 3D figure labels drilling, milling and
+disengagement as phases 1, 2 and 3, respectively.
+
+## Task 3 · workpiece coord.
+
+Run `python3 plot_traces.py --task-3` from this directory to regenerate the
+[converted recordings](outputs/workpiece_coordinates.csv), the
+[position plot with plunge details](plots/coordinates_vs_time.png), and the
+[3D toolpath showing both origins](plots/trajectory_3d_origins.png).
+
+Task 3 uses the 184.970 mm tool length from slide 8. Its milling markers use
+the interpolated downward crossing of −1.990 mm, within 0.010 mm of the
+programmed depth. See [Point 3 in OUTCOMES.md](OUTCOMES.md#point-3) for the conversion
+and a worked example.

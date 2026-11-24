@@ -203,17 +203,21 @@ def write_feed_csv(path, nominal, encoder):
                     writer.writerow([series, run, step, f"{t:.6f}", f"{s:.6f}", f"{vx:.6f}", f"{vy:.6f}"])
 
 
-def save_figure(path, blocks, nominal, encoder):
-    fig, axes = plt.subplots(2, 2, sharex="row", sharey=True, figsize=(11.5, 6.7),
-                             layout="constrained")
-    fig.suptitle("Feed velocity components during milling")
-    curves = [
+def comparison_curves(nominal, encoder):
+    return [
         (encoder["Machining"], dict(label="Encoder · with material removal", color="#17648a",
                                    linewidth=1.6, alpha=0.9)),
         (encoder["No cutting"], dict(label="Encoder · without material removal", color="#ae4519",
                                     linewidth=1.1, alpha=0.9)),
         (nominal, dict(label="Nominal", color="0.22", linestyle="--", linewidth=1.3)),
     ]
+
+
+def save_figure(path, blocks, nominal, encoder):
+    fig, axes = plt.subplots(2, 2, sharex="row", sharey=True, figsize=(11.5, 6.7),
+                             layout="constrained")
+    fig.suptitle("Feed velocity components during milling")
+    curves = comparison_curves(nominal, encoder)
     for col, axis_name in enumerate("XY"):
         axes[0, col].set_title(f"{axis_name} component")
         for row, (coordinate, xlabel) in enumerate((
@@ -245,6 +249,23 @@ def save_figure(path, blocks, nominal, encoder):
     plt.close(fig)
 
 
+def save_distance_figure(path, nominal, encoder):
+    fig, ax = plt.subplots(figsize=(8, 4.5), layout="constrained")
+    ax.set(title="Progress along the milling contour", xlabel="Elapsed milling time $t$ (s)",
+           ylabel="Cumulative contour distance $s$ (mm)")
+    ax.grid(color="0.90")
+    ax.set_axisbelow(True)
+    for samples, style in comparison_curves(nominal, encoder):
+        time = np.concatenate([sample.elapsed_s for sample in samples])
+        distance = np.concatenate([sample.distance_mm for sample in samples])
+        ax.plot(time, distance, **style)
+    ax.set_xlim(left=0)
+    ax.set_ylim(bottom=0)
+    ax.legend(loc="upper left", frameon=False)
+    fig.savefig(path, dpi=180)
+    plt.close(fig)
+
+
 def main():
     blocks = read_contour(ROOT / "data" / "5ASM.MPF")
     intervals = read_milling_intervals(INTERVALS_CSV, blocks)
@@ -258,6 +279,7 @@ def main():
     output.mkdir(exist_ok=True)
     write_feed_csv(CSV_OUTPUT_DIR / "feed_velocity.csv", nominal, encoder)
     save_figure(output / "feed_velocity.png", blocks, nominal, encoder)
+    save_distance_figure(output / "curvilinear_coordinate_vs_time.png", nominal, encoder)
 
 
 if __name__ == "__main__":

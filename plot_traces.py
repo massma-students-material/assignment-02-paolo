@@ -1,14 +1,23 @@
-"""Generate paired SINUMERIK trace figures and outputs/machining_intervals.csv."""
+"""Generate SINUMERIK trace figures and CSVs for Assignment 2."""
+
+import argparse
+import csv
 
 import matplotlib
 import numpy as np
 
-from machining_intervals import DEPTH_Z, RETRACT_Z, identify_intervals, write_intervals
-from trace_data import CSV_OUTPUT_DIR, INTERVALS_CSV, ROOT, RUNS, load_trace
+from machining_intervals import (
+    DEPTH_Z, RETRACT_Z, TASK3_DEPTH_TOLERANCE_MM, identify_intervals, write_intervals,
+)
+from trace_data import (
+    CSV_OUTPUT_DIR, G55, INTERVALS_CSV, ROOT, RUNS, TASK3_TOOL_LENGTH, load_trace,
+)
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.path import Path
+from matplotlib.ticker import MaxNLocator
 
 PHASE_STYLES = {
     "Drilling": (1, "#862b83", "o"),
@@ -20,6 +29,10 @@ TRACE_STYLES = [
     {"label": "Programmed target", "color": "tab:orange", "linestyle": "--",
      "drawstyle": "steps-post"},
 ]
+TASK3_RUN_TITLES = {
+    "Machining": "With material removal",
+    "No cutting": "Without material removal",
+}
 
 
 def trajectory_section(time, positions, start, end):
@@ -43,18 +56,23 @@ def label_milling_blocks(ax, time, measured, blocks):
                 bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="none"))
 
 
-def main():
+def phase_boundaries(intervals):
+    drilling = next(item for item in intervals if item.phase == "Drilling")
+    disengagement = next(item for item in intervals if item.phase == "Tool disengagement")
+    return {
+        "Drilling": (drilling.start_s, drilling.end_s),
+        "Milling": (drilling.end_s, disengagement.start_s),
+        "Tool disengagement": (disengagement.start_s, disengagement.end_s),
+    }
+
+
+def plot_historical_traces():
     output = ROOT / "plots"
     output.mkdir(exist_ok=True)
     path_fig = plt.figure(figsize=(12, 5.8), layout="constrained")
     power_fig, power_axes = plt.subplots(1, 2, sharey=True, figsize=(11, 4), layout="constrained")
-    coord_fig, coord_grid = plt.subplots(4, 2, sharex="col", sharey="row",
-                                         height_ratios=(0.18, 1, 1, 1),
-                                         figsize=(11, 8.4), layout="constrained")
-    label_axes, coord_axes = coord_grid[0], coord_grid[1:]
     path_fig.suptitle("Measured tool-tip trajectory in G55")
     power_fig.suptitle("Drive channel 4 active power")
-    coord_fig.suptitle("Axis positions through the full recording")
 
     path_points = []
     run_intervals = {}
@@ -64,48 +82,22 @@ def main():
         time, commanded, measured, power = load_trace(filename)
         intervals = identify_intervals(time, commanded, measured)
         run_intervals[title] = intervals
-        drilling = next(item for item in intervals if item.phase == "Drilling")
-        disengagement = next(item for item in intervals if item.phase == "Tool disengagement")
-        phase_bounds = {
-            "Drilling": (drilling.start_s, drilling.end_s),
-            "Milling": (drilling.end_s, disengagement.start_s),
-            "Tool disengagement": (disengagement.start_s, disengagement.end_s),
-        }
+        phase_bounds = phase_boundaries(intervals)
 
         ax = path_fig.add_subplot(1, 2, col + 1, projection="3d")
         ax.set(title=title, xlabel="X (mm)", ylabel="Y (mm)", zlabel="Z (mm)")
-        label_axis = label_axes[col]
-        label_axis.set_axis_off()
-        label_axis.set_title(title)
         for phase, (start, end) in phase_bounds.items():
-            number, color, marker = PHASE_STYLES[phase]
+            _, color, marker = PHASE_STYLES[phase]
             section = trajectory_section(time, measured, start, end)
             path_points.append(section)
             ax.plot(*section.T, color=color, linewidth=2.5, marker=marker, markevery=[0],
                     markersize=4, markeredgewidth=0.6, markeredgecolor="white", zorder=4)
-            for panel in coord_axes[:, col]:
-                panel.axvline(start, color=color, linestyle=":", linewidth=1.5, zorder=4)
-            # Offset drilling so its label clears the milling label in the dry run.
-            is_drilling = number == 1
-            label_axis.annotate(
-                str(number), (start, 0.5),
-                xycoords=("data", "axes fraction"), xytext=(-4 if is_drilling else 0, 0),
-                textcoords="offset points", color=color, weight="bold",
-                ha="right" if is_drilling else "center", va="center",
-            )
 
         # The logged targets are waypoints. Connecting them would draw a chord across the arc.
         blocks = [item for item in intervals if item.phase == "Milling"]
         targets = [block.target_mm for block in blocks]
         ax.plot(*np.array(targets).T, **target_style, zorder=5)
         label_milling_blocks(ax, time, measured, blocks)
-        for points, style in zip((measured, commanded), TRACE_STYLES):
-            for row, axis_name in enumerate("XYZ"):
-                panel = coord_axes[row, col]
-                panel.plot(time, points[:, row], **style)
-                panel.set_ylabel(f"{axis_name} (mm)")
-                panel.grid(alpha=0.25)
-        coord_axes[-1, col].set_xlabel("Elapsed time (s)")
         power_axes[col].plot(time, power, linewidth=0.9)
         power_axes[col].set(title=title, xlabel="Elapsed time (s)")
         power_axes[col].grid(alpha=0.25)
@@ -117,13 +109,6 @@ def main():
     target_handle = Line2D([], [], **target_style, label="Programmed XY targets")
     path_fig.legend(handles=[*phase_handles, target_handle], loc="outside lower center", ncols=4,
                     frameon=False)
-    event_handles = [
-        Line2D([], [], color=color, linestyle=":", label=f"{number}  {phase} starts")
-        for phase, (number, color, _) in PHASE_STYLES.items()
-    ]
-    trace_handles = [Line2D([], [], **style) for style in TRACE_STYLES]
-    coord_fig.legend(handles=[*trace_handles, *event_handles], loc="outside lower center",
-                     ncols=5, frameon=False)
 
     points = np.vstack(path_points)
     low, high = points.min(axis=0) - 1, points.max(axis=0) + 1
@@ -173,13 +158,160 @@ def main():
         ax.set_zticks(z_ticks)
         ax.set_box_aspect((high[0] - low[0], high[1] - low[1], z_max - z_min))
     power_axes[0].set_ylabel("Active power (W)")
-    for fig, name in [(path_fig, "trajectory_3d"), (power_fig, "active_power"),
-                      (coord_fig, "coordinates_vs_time")]:
+    for fig, name in [(path_fig, "trajectory_3d"), (power_fig, "active_power")]:
         fig.savefig(output / f"{name}.png", dpi=180)
         plt.close(fig)
     CSV_OUTPUT_DIR.mkdir(exist_ok=True)
     write_intervals(INTERVALS_CSV, run_intervals)
 
 
+def write_workpiece_csv(path, traces):
+    with path.open("w", newline="", encoding="utf-8") as output:
+        writer = csv.writer(output, lineterminator="\n")
+        writer.writerow([
+            "run", "time_s",
+            *(f"programmed_{axis}_workpiece_mm" for axis in "xyz"),
+            *(f"measured_{axis}_workpiece_mm" for axis in "xyz"),
+            "active_power",
+        ])
+        for run, (time, commanded, measured, power) in traces.items():
+            # Suppress binary subtraction artifacts in the translated coordinates.
+            for t, target, position, active_power in zip(time, commanded, measured.round(9), power):
+                writer.writerow([run, f"{t:.6f}", *target, *position, active_power])
+
+
+def plot_measured_and_programmed(ax, time, measured, commanded):
+    for positions, style in zip((measured, commanded), TRACE_STYLES):
+        ax.plot(time, positions, **style)
+    ax.grid(alpha=0.25)
+
+
+def save_workpiece_coordinates(path, traces, run_intervals):
+    fig, axes = plt.subplots(4, 2, sharey="row", height_ratios=(1, 1, 1, 0.76),
+                            figsize=(11.5, 9), layout="constrained")
+    fig.suptitle("Tool-tip position in workpiece coord. over time")
+    for column, (run, (time, commanded, measured, _)) in enumerate(traces.items()):
+        phase_bounds = phase_boundaries(run_intervals[run])
+        for row, axis_name in enumerate("XYZ"):
+            ax = axes[row, column]
+            if row:
+                ax.sharex(axes[0, column])
+            plot_measured_and_programmed(ax, time, measured[:, row], commanded[:, row])
+            if column == 0:
+                ax.set_ylabel(f"{axis_name} workpiece coord. (mm)")
+            for phase, (start, _) in phase_bounds.items():
+                ax.axvline(start, color=PHASE_STYLES[phase][1], linestyle=":", linewidth=1.3)
+            if row == 0:
+                ax.set_title(TASK3_RUN_TITLES[run])
+            if row == 2:
+                ax.set_xlabel("Elapsed time (s)")
+            else:
+                ax.tick_params(labelbottom=False)
+
+        zoom = axes[3, column]
+        start, end = phase_bounds["Drilling"]
+        padding = max(0.035, 0.08 * (end - start))
+        zoom_left, zoom_right = start - padding, end + padding
+        sample_window = slice(
+            max(0, time.searchsorted(zoom_left) - 1),
+            time.searchsorted(zoom_right) + 1,
+        )
+        plot_measured_and_programmed(
+            zoom, time[sample_window], measured[sample_window, 2], commanded[sample_window, 2],
+        )
+        for phase in ("Drilling", "Milling"):
+            zoom.axvline(phase_bounds[phase][0], color=PHASE_STYLES[phase][1], linestyle=":")
+        zoom.set(title="Plunge detail", xlabel="Elapsed time (s)", xlim=(zoom_left, zoom_right),
+                 ylim=(-2.3, 0.35), yticks=(-2, -1, 0))
+        if column == 0:
+            zoom.set_ylabel("Z workpiece coord. (mm)")
+        zoom.xaxis.set_major_locator(MaxNLocator(5))
+
+    handles = [Line2D([], [], **style) for style in TRACE_STYLES]
+    handles.extend(Line2D([], [], color=color, linestyle=":", label=label)
+                   for label, (_, color, _) in PHASE_STYLES.items())
+    fig.legend(handles=handles, loc="outside lower center", ncols=5, frameon=False)
+    fig.savefig(path, dpi=180)
+    plt.close(fig)
+
+
+def mark_origin(ax, position, quadrant):
+    ink = "#243649"
+    style = dict(linestyle="none", color=ink, zorder=12)
+    ax.plot(*position, marker="o", markersize=12, markerfacecolor="white", **style)
+    ax.plot(*position, marker=Path.wedge(*quadrant), markersize=10, **style)
+    ax.plot(*position, marker="+", markersize=14, **style)
+
+
+def save_trajectory_origins(path, trace, intervals):
+    time, _, measured, _ = trace
+    sections = {
+        phase: trajectory_section(time, measured, start, end)
+        for phase, (start, end) in phase_boundaries(intervals).items()
+    }
+    workpiece_origin = np.zeros(3)
+    machine_origin = -G55
+    origin_coordinates = ", ".join(f"{value:.3f}" for value in machine_origin)
+
+    fig = plt.figure(figsize=(13, 6.2), layout="constrained")
+    fig.suptitle("Measured tool-tip trajectory with material removal")
+    overview, detail = fig.subplots(1, 2, subplot_kw={"projection": "3d"})
+    overview.set_title("Machine and workpiece origins")
+    detail.set_title("Toolpath close-up")
+    overview.set(xlim=(-65, 310), ylim=(-35, 300), zlim=(-20, 410))
+    detail.set(xlim=(-58, 17), ylim=(-28, 17), zlim=(-5, 55))
+    origin_line = np.vstack([workpiece_origin, machine_origin])
+    overview.plot(*origin_line.T, linestyle="--", color="0.52", linewidth=1)
+    mark_origin(overview, machine_origin, (90, 180))
+    overview.text(270, 255, 392, "$O_M$ (" + origin_coordinates + ")",
+                  fontsize=9, ha="right", color="#243649")
+    for ax in (overview, detail):
+        ax.set(xlabel="X workpiece coord. (mm)", ylabel="Y workpiece coord. (mm)",
+               zlabel="Z workpiece coord. (mm)")
+        ax.set_proj_type("ortho")
+        ax.view_init(elev=24, azim=-57)
+        ax.set_box_aspect([np.ptp(bounds) for bounds in (ax.get_xlim(), ax.get_ylim(), ax.get_zlim())])
+        ax.tick_params(labelsize=8)
+        for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+            axis.set_major_locator(MaxNLocator(5, min_n_ticks=4))
+        for phase, section in sections.items():
+            _, color, marker = PHASE_STYLES[phase]
+            ax.plot(*section.T, color=color, marker=marker, markevery=[0], markersize=4,
+                    markeredgecolor="white", linewidth=2.2, zorder=5)
+        mark_origin(ax, workpiece_origin, (270, 360))
+    overview.text(12, 6, 8, "$O_P$ (0, 0, 0)", fontsize=9, color="#243649")
+    detail.text(0, 0, 4, "$O_P$ (0, 0, 0)", fontsize=9, color="#243649")
+
+    handles = [Line2D([], [], color=color, marker=marker, label=phase)
+               for phase, (_, color, marker) in PHASE_STYLES.items()]
+    fig.legend(handles=handles, loc="outside lower center", ncols=3, frameon=False)
+    fig.savefig(path, dpi=180)
+    plt.close(fig)
+
+
+def plot_task3_traces():
+    traces = {run: load_trace(filename, tool_length_mm=TASK3_TOOL_LENGTH)
+              for run, filename in RUNS.items()}
+    intervals = {
+        run: identify_intervals(time, commanded, measured, depth_tolerance_mm=TASK3_DEPTH_TOLERANCE_MM)
+        for run, (time, commanded, measured, _) in traces.items()
+    }
+    plot_output = ROOT / "plots"
+    CSV_OUTPUT_DIR.mkdir(exist_ok=True)
+    plot_output.mkdir(exist_ok=True)
+    write_workpiece_csv(CSV_OUTPUT_DIR / "workpiece_coordinates.csv", traces)
+    save_workpiece_coordinates(plot_output / "coordinates_vs_time.png", traces, intervals)
+    save_trajectory_origins(plot_output / "trajectory_3d_origins.png",
+                            traces["Machining"], intervals["Machining"])
+
+
+def main(*, task_3=False):
+    if not task_3:
+        plot_historical_traces()
+    plot_task3_traces()
+
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--task-3", action="store_true", help="Convert and plot Task 3 workpiece coord.")
+    main(task_3=parser.parse_args().task_3)

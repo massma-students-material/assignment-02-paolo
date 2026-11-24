@@ -7,6 +7,7 @@ import numpy as np
 
 SURFACE_Z = 0.0  # mm in G55
 DEPTH_Z = -2.0
+TASK3_DEPTH_TOLERANCE_MM = 0.010
 RETRACT_Z = 50.0
 RETRACT_TOLERANCE_MM = 0.02
 
@@ -44,7 +45,7 @@ def crossing_time(time, z, level, direction):
     return float(time[i] + fraction * (time[i + 1] - time[i]))
 
 
-def identify_intervals(time, commanded, measured):
+def identify_intervals(time, commanded, measured, *, depth_tolerance_mm=0.0):
     """Return consecutive intervals using commanded targets and encoder G55 positions."""
     if not np.all(np.isfinite(time)) or not np.all(np.diff(time) > 0):
         raise ValueError("Trace times must be finite and strictly increasing")
@@ -68,11 +69,11 @@ def identify_intervals(time, commanded, measured):
         raise ValueError("Logged XY targets do not match the reversed 5ASM.MPF contour")
 
     # The first XY target is logged slightly before the encoder reaches full depth.
-    # Use the actual depth crossing for the plunge-to-milling boundary.
+    # Use the encoder's first entry into the configured depth band.
     descent = slice(plunge, target_rows[1])
     z = measured[:, 2]
     surface_s = crossing_time(time[descent], z[descent], SURFACE_Z, direction=-1)
-    depth_s = crossing_time(time[descent], z[descent], DEPTH_Z, direction=-1)
+    depth_s = crossing_time(time[descent], z[descent], DEPTH_Z + depth_tolerance_mm, direction=-1)
     retract_s = float(time[retract])
     safe_s = crossing_time(time[retract:], z[retract:],
                            RETRACT_Z - RETRACT_TOLERANCE_MM, direction=1)
