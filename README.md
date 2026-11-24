@@ -38,3 +38,28 @@ The two CSV files record the CNC signals at 4 ms intervals (250 Hz). Each row co
 | `programmed_x_mm`, `programmed_y_mm`, `programmed_z_mm` | `s1`, `s2`, `s3` | Commanded X, Y and Z positions in the G55 workpiece frame, in millimetres. |
 | `measured_x_mm`, `measured_y_mm`, `measured_z_mm` | `s4`, `s5`, `s6` | Encoder 1 feedback for X, Y and Z in machine coordinates, in millimetres. Apply the G55 offset and the Z tool-length correction before comparing these values with the commanded positions. |
 | `active_power` | `s11` | Active power reported for drive channel 4, in watts (W). |
+
+## Machining intervals
+
+Run `python3 plot_traces.py` with Python 3.10+, NumPy and Matplotlib 3.7+ to generate
+[machining_intervals.csv](machining_intervals.csv) and refresh the plots. Each CSV
+row gives the start, end and duration of one phase in its own recording. The
+milling rows also give the contour block number, motion type and programmed
+target in G55.
+
+1. **Positioning** covers the initial recording and the approach to the surface.
+2. **Drilling (plunge)** starts when the encoder Z crosses the workpiece surface
+   (0 mm) and ends when it reaches the programmed contour depth (−2 mm).
+   This analysis interprets `Z = 1 mm` in Task 1 as the cycle's `Z1` depth parameter.
+3. **Milling** follows the seven contour blocks in the reverse order specified by
+   the cycle. The commanded XY columns report each block's destination as a step.
+   New targets mark the subsequent block starts. The first block starts at the
+   measured depth crossing because the first XY target is logged slightly earlier.
+4. **Tool disengagement** starts at the retract command and ends when the encoder
+   comes within 0.02 mm of the 50 mm retract plane. The remaining samples form the
+   post-retract hold.
+
+Encoder crossing times are linearly interpolated between the 4 ms samples after
+applying G55 and the Z tool-length correction. Physical cutter contact would
+require separate evidence. The numbers 1, 2 and 3 in the plots mark the starts
+of drilling, milling and disengagement, respectively.
