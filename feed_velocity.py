@@ -49,6 +49,15 @@ class ContourBlock:
             local_s = self.radius_mm * local_angle
         return self.s_start_mm + np.clip(local_s, 0, self.length_mm)
 
+    def position_at(self, distance_mm):
+        """Return nominal XY at the given cumulative contour distances."""
+        local_s = distance_mm - self.s_start_mm
+        if self.center_xy is None:
+            fraction = local_s / self.length_mm
+            return self.start_xy + fraction[:, None] * (self.end_xy - self.start_xy)
+        angles = self.start_angle_rad + local_s / self.radius_mm
+        return self.center_xy + self.radius_mm * np.column_stack((np.cos(angles), np.sin(angles)))
+
     def nominal_velocity(self, local_s):
         if self.center_xy is None:
             tangent = (self.end_xy - self.start_xy) / self.length_mm
