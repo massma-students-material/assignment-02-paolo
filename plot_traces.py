@@ -1,23 +1,15 @@
-"""Generate paired SINUMERIK trace figures and machining_intervals.csv."""
-
-from pathlib import Path
+"""Generate paired SINUMERIK trace figures and outputs/machining_intervals.csv."""
 
 import matplotlib
 import numpy as np
 
 from machining_intervals import DEPTH_Z, RETRACT_Z, identify_intervals, write_intervals
+from trace_data import CSV_OUTPUT_DIR, INTERVALS_CSV, ROOT, RUNS, load_trace
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-ROOT = Path(__file__).resolve().parent
-RUNS = {
-    "Machining": "5ASM26_milling.csv",
-    "No cutting": "5ASM26_No_material_Removal.csv",
-}
-G55 = np.array([-279.872, -272.170, -374.244])  # mm
-TOOL_LENGTH = 184.978  # mm
 PHASE_STYLES = {
     "Drilling": (1, "#862b83", "o"),
     "Milling": (2, "#007878", "D"),
@@ -35,6 +27,20 @@ def trajectory_section(time, positions, start, end):
     inside = (start < time) & (time < end)
     section_time = np.r_[start, time[inside], end]
     return np.column_stack([np.interp(section_time, time, axis) for axis in positions.T])
+
+
+def label_milling_blocks(ax, time, measured, blocks):
+    """Place each block number next to the midpoint of its measured XY path."""
+    for block in blocks:
+        section = trajectory_section(time, measured, block.start_s, block.end_s)
+        steps = np.linalg.norm(np.diff(section[:, :2], axis=0), axis=1)
+        travel = np.r_[0, np.cumsum(steps)]
+        x, y, z = section[np.searchsorted(travel, travel[-1] / 2)]
+        # Label the arc to its left to clear the target at its entrance.
+        dx, dz = (-3.5, 0.5) if block.motion == "arc" else (0, 3.7)
+        ax.text(x + dx, y, z + dz, str(block.milling_step), color="#005b5b", fontsize=9,
+                weight="bold", ha="center", va="center", zorder=6,
+                bbox=dict(boxstyle="round,pad=0.15", facecolor="white", edgecolor="none"))
 
 
 def main():
@@ -55,11 +61,7 @@ def main():
     target_style = dict(linestyle="none", marker="o", markersize=7, markerfacecolor="none",
                         markeredgecolor="0.26", markeredgewidth=1.1)
     for col, (title, filename) in enumerate(RUNS.items()):
-        data = np.genfromtxt(ROOT / "data" / filename, delimiter=",", names=True)
-        time = data["time_s"]
-        commanded = np.column_stack([data[f"programmed_{axis}_mm"] for axis in "xyz"])
-        measured = np.column_stack([data[f"measured_{axis}_mm"] for axis in "xyz"]) - G55
-        measured[:, 2] -= TOOL_LENGTH
+        time, commanded, measured, power = load_trace(filename)
         intervals = identify_intervals(time, commanded, measured)
         run_intervals[title] = intervals
         drilling = next(item for item in intervals if item.phase == "Drilling")
@@ -93,8 +95,10 @@ def main():
             )
 
         # The logged targets are waypoints. Connecting them would draw a chord across the arc.
-        targets = [item.target_mm for item in intervals if item.phase == "Milling"]
+        blocks = [item for item in intervals if item.phase == "Milling"]
+        targets = [block.target_mm for block in blocks]
         ax.plot(*np.array(targets).T, **target_style, zorder=5)
+        label_milling_blocks(ax, time, measured, blocks)
         for points, style in zip((measured, commanded), TRACE_STYLES):
             for row, axis_name in enumerate("XYZ"):
                 panel = coord_axes[row, col]
@@ -102,7 +106,7 @@ def main():
                 panel.set_ylabel(f"{axis_name} (mm)")
                 panel.grid(alpha=0.25)
         coord_axes[-1, col].set_xlabel("Elapsed time (s)")
-        power_axes[col].plot(time, data["active_power"], linewidth=0.9)
+        power_axes[col].plot(time, power, linewidth=0.9)
         power_axes[col].set(title=title, xlabel="Elapsed time (s)")
         power_axes[col].grid(alpha=0.25)
 
@@ -173,7 +177,8 @@ def main():
                       (coord_fig, "coordinates_vs_time")]:
         fig.savefig(output / f"{name}.png", dpi=180)
         plt.close(fig)
-    write_intervals(ROOT / "machining_intervals.csv", run_intervals)
+    CSV_OUTPUT_DIR.mkdir(exist_ok=True)
+    write_intervals(INTERVALS_CSV, run_intervals)
 
 
 if __name__ == "__main__":

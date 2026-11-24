@@ -42,7 +42,7 @@ The two CSV files record the CNC signals at 4 ms intervals (250 Hz). Each row co
 ## Machining intervals
 
 Run `python3 plot_traces.py` with Python 3.10+, NumPy and Matplotlib 3.7+ to generate
-[machining_intervals.csv](machining_intervals.csv) and refresh the plots. Each CSV
+[machining_intervals.csv](outputs/machining_intervals.csv) and refresh the plots. Each CSV
 row gives the start, end and duration of one phase in its own recording. The
 milling rows also give the contour block number, motion type and programmed
 target in G55.
@@ -58,6 +58,11 @@ target in G55.
 4. **Tool disengagement** starts at the retract command and ends when the encoder
    comes within 0.02 mm of the 50 mm retract plane. The remaining samples form the
    post-retract hold.
+
+**Report reminder.** The milling cycle runs `backward` through the contour in
+[5ASM.MPF](data/5ASM.MPF). The recorded path goes from `(-50, 0)` to `(-40, -20)`.
+Use the recorded arc direction from `(-30, 0)` to `(-20, -10)` (counterclockwise)
+when calculating the signs of the X and Y feed-velocity components.
 
 Encoder crossing times are linearly interpolated between the 4 ms samples after
 applying G55 and the Z tool-length correction. Physical cutter contact would
