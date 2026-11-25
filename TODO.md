@@ -73,3 +73,25 @@ Present the calculation and the results in [outcomes file](./OUTCOMES.md). Draw 
 - Use the G55 coordinates and milling boundaries from Task 3. Project each encoder XY sample onto its assigned programmed line or arc for both runs.
 - Calculate measured minus nominal X and Y in µm. Express each signed error as a percentage of the programmed block length.
 - Save all milling samples in [position_error.csv](outputs/position_error.csv). Compare the signed peak by absolute value for each axis and block in [Point 4](OUTCOMES.md#point-4), and flag peaks at the first or last sample of a block.
+
+## Task 5 - report for colleagues
+
+Write the report for presenting my analysis to my colleagues. Therefore, the aim of this file is presenting the analysis results and conclusions (through each brief point). For completeness, I'd add the methodology followed. 
+
+What do you suggest: divide the report in sections for each point, presenting first the methodology and then the results? Or divide in sections presenting the results, then in later sections, like "annexes" presenting the methodology?
+
+General instructions:
+
+* be concise and clear, without wasting time in complex explanations
+* add the reference to the code and the `csv` files of this [repository](https://github.com/massma-students-material/assignment-02-paolo)
+* take inspiration from the template used for the other reports of the other assignments
+
+The last section (regarding results/solution of the point) should be a section of comparison the work with my colleagues. It's stille empty!
+
+Specify the Ai usage:
+
+* the AI usage methodolgy is: `TODO.ms` explains the task, AI generate materials, outcomes in `OUTCOMES.md`
+* the author reviewed and approved all the material
+* insert the model GPT 6 used 
+
+

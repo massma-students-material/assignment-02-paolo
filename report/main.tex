@@ -1,0 +1,227 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=18mm,headheight=13pt,headsep=5mm,footskip=9mm]{geometry}
+\usepackage{amsmath,graphicx,booktabs,caption,titlesec,fancyhdr,xcolor}
+\definecolor{navy}{HTML}{173A55}
+\usepackage[colorlinks=true,urlcolor=navy,linkcolor=navy]{hyperref}
+\hypersetup{
+  pdftitle={Assignment 2 - Interpolation and position measurement},
+  pdfauthor={Paolo Rossi},
+  pdfsubject={Multi Agent Systems for Smart Machining, ECIU Micro-Module}
+}
+\titleformat{\section}{\Large\sffamily\bfseries\color{navy}}{\thesection}{0.65em}{}
+\titlespacing*{\section}{0pt}{8pt}{5pt}
+\captionsetup{font=small,labelfont=bf,skip=4pt,hypcap=false}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\renewcommand{\arraystretch}{1.18}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Assignment 2 \enspace$\cdot$\enspace Interpolation and position measurement}
+\fancyhead[R]{\small Paolo Rossi -- 277177}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\graphicspath{{../plots/}}
+\newcommand{\assignmenturl}{https://github.com/massma-students-material/assignment-02-paolo}
+\newcommand{\repofile}[2]{\href{\assignmenturl/blob/79d9096c0ea39a8f55ba3f66c3150e4b9892b94f/#1}{#2}}
+\newcommand{\authorprofile}{\href{https://github.com/PaoloRos}{Paolo Rossi}}
+\newcommand{\reportfigure}[2]{%
+  \par\medskip
+  \noindent\begin{minipage}{\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{#1}
+    \captionof{figure}{#2}
+  \end{minipage}\par
+}
+
+\begin{document}
+\thispagestyle{plain}
+\begin{minipage}[c]{0.77\linewidth}
+  {\Huge\sffamily\bfseries\color{navy} Assignment 2}\\[4pt]
+  {\Large Interpolation and position measurement}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.19\linewidth}
+  \raggedleft\includegraphics[width=27mm]{unitn_logo.png}
+\end{minipage}
+
+Multi Agent Systems for Smart Machining \hfill \authorprofile{} -- 277177\\
+ECIU Micro-Module, INSA Toulouse \hfill Academic Year 2026/27
+\par\hrule
+
+\section{Nominal feed and machining sequence}
+The nominal feed along the milling contour is \textbf{955 mm/min (15.92 mm/s)}.
+With a nominal cutter diameter of $4$ mm, three teeth, a cutting speed of $80$ m/min,
+and a feed per tooth of $0.050$ mm/tooth, the spindle speed is
+\[
+  n=\frac{1000(80)}{\pi(4)}\simeq 6366\ \mathrm{rpm},
+  \qquad v_f=0.050(3)n\simeq 955\ \mathrm{mm/min}.
+\]
+The milling cycle traverses the seven blocks in reverse order from the contour
+listing in the CNC program. Both encoder traces were sampled every $4$ ms.
+\par
+\repofile{data/5ASM.MPF}{CNC program} \enspace$\cdot$\enspace
+\repofile{README.md\#trace-data}{Trace inputs and signal definitions}
+
+\begin{center}
+\small
+\captionof{table}{Phase intervals in seconds from the start of each recording.
+  Points 1--2 use a tool length of $184.978$ mm and a plunge-end crossing of $-2.000$ mm.}
+\label{tab:phases}\begin{tabular}{@{}lcc@{}}
+\toprule
+Phase & With material removal & Without material removal\\
+\midrule
+Positioning     & $0.000\div 28.830$  & $0.000\div 5.027$\\
+Plunge          & $28.830\div 30.962$ & $5.027\div 5.172$\\
+Milling         & $30.962\div 43.560$ & $5.172\div 14.848$\\
+Retract         & $43.560\div 43.910$ & $14.848\div 15.199$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Interpolate encoder Z crossings at the workpiece surface and the programmed depth
+to mark the start and end of the plunge. The subsequent changes in commanded XY
+targets mark the internal milling boundaries. The retract command ends milling.
+Retract ends when encoder Z reaches within $0.02$ mm of the $50$ mm plane.
+\par
+\repofile{machining_intervals.py}{Interval code} \enspace$\cdot$\enspace
+\repofile{outputs/machining_intervals.csv}{Phase and block timings}
+
+\reportfigure{trajectory_3d.png}{Encoder trajectories and programmed block endpoints for both
+  runs. Legend entries 1--3 identify plunge, milling, and retract using the timing
+  convention in \hyperref[tab:phases]{Table~\ref*{tab:phases}}.}
+
+\newpage
+\section{X and Y feed components}
+The $146.353$ mm contour takes \textbf{9.196 s nominally}, \textbf{12.598 s with
+material removal}, and \textbf{9.676 s without}. Block 1 accounts for most of the
+timing difference between the recorded runs. It takes $4.230$ s with material
+removal and $1.316$ s without. The encoder shows a near-stop early in block 1 of
+the material-removal run. The two runs have similar feed components at matching
+contour positions in blocks 2--7.
+
+\reportfigure{feed_velocity.png}{Nominal and encoder X and Y feed components by cumulative
+  contour distance and elapsed milling time. For each recording, elapsed time
+  starts at the $-2.000$ mm crossing with the $184.978$ mm tool length.}
+
+The nominal XY velocity is the scalar feed $v_f$ times the unit tangent to the
+executed contour. For a straight block with displacement $(\Delta x,\Delta y)$,
+\[
+  (v_x,v_y)=v_f\frac{(\Delta x,\Delta y)}{\sqrt{\Delta x^2+\Delta y^2}}.
+\]
+For the counterclockwise arc in block 2, the radius is $10$ mm and the arc begins
+at $s=20$ mm. With $s$ measured from the start of the contour,
+\[
+  \phi=\frac{s-20\ \mathrm{mm}}{10\ \mathrm{mm}},
+  \qquad (v_x,v_y)=v_f(\sin\phi,-\cos\phi).
+\]
+Encoder components come from the slopes of local quadratic fits over nine samples
+spanning $32$ ms. Projecting each sample onto its assigned block gives the
+cumulative distance $s$. The nominal time axis uses $t=s/v_f$.
+\par
+\repofile{feed_velocity.py}{Velocity code} \enspace$\cdot$\enspace
+\repofile{outputs/feed_velocity.csv}{Velocity CSV} \enspace$\cdot$\enspace
+\repofile{OUTCOMES.md\#point-2}{Nominal components for all seven blocks}
+
+\newpage
+\section{Machine-to-workpiece coordinates}
+At the final retract sample with material removal ($44.432$ s), the converted
+tool-tip position matches the programmed G55 position within $2.1~\mu\mathrm{m}$
+on each axis.
+\[
+  \mathbf p_{\mathrm{meas}}=(-40.00029,-20.00017,50.00207)\ \mathrm{mm},
+  \qquad \mathbf p_{\mathrm{prog}}=(-40,-20,50)\ \mathrm{mm}.
+\]
+
+Subtract the G55 offset and the axial tool length from the encoder position
+$\mathbf p_M$ in machine coordinates. \hyperlink{slides}{Slide 8} gives
+$\mathbf{G55}=(-279.872,-272.170,-374.244)$ mm and $D_1=184.970$ mm, so
+\[
+  \mathbf p_{\mathrm{G55}}
+  =\mathbf p_M-\mathbf{G55}-(0,0,D_1)
+  =\mathbf p_M+(279.872,272.170,189.274)\ \mathrm{mm}.
+\]
+Points 3--4 mark milling start at the first interpolated downward crossing of
+$-1.990$ mm using the slide-8 tool length. That crossing occurs at $30.959$ s with
+material removal and $5.170$ s without. Points 1--2 use the historical tool length
+of $184.978$ mm and a $-2.000$ mm crossing.
+
+\reportfigure{coordinates_vs_time.png}{Programmed targets and converted encoder positions
+  over time. The phase markers and plunge details use the $-1.990$ mm threshold
+  with the $184.970$ mm tool length.}
+
+\reportfigure{trajectory_3d_origins.png}{Machine origin $O_M$ and G55 workpiece origin $O_P$ during the material-removal run. \repofile{plots/trajectory_3d_origins.png}{Full-size view}.}
+\repofile{trace_data.py}{Conversion code} \enspace$\cdot$\enspace
+\repofile{plot_traces.py}{Plotting code} \enspace$\cdot$\enspace
+\repofile{outputs/workpiece_coordinates.csv}{Converted recordings}
+
+\section{Signed XY contour error}
+The largest component deviations are \textbf{$-28.86~\mu\mathrm{m}$ in X} with
+material removal and \textbf{$-28.27~\mu\mathrm{m}$ in Y} without. Both occur at
+the first sample of their respective blocks.
+
+\begin{center}
+\small
+\captionof{table}{Largest absolute component error in each run, with the sign retained.}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Run & Axis and block & Error ($\mu$m) & Error (\% of block length) & Boundary flag\\
+\midrule
+With material removal    & X, block 2 & $-28.86$ & $-0.18373$ & First sample\\
+Without material removal & Y, block 4 & $-28.27$ & $-0.28270$ & First sample\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\reportfigure{position_error.png}{Signed X and Y contour errors for both runs. Vertical lines
+  mark the block boundaries and markers identify the largest absolute error in
+  each axis, block, and run. Sample assignment uses the Point 3 intervals.}
+
+Within each block, project the measured G55 XY sample onto the programmed line
+segment or circular arc. For axis $i\in\{x,y\}$, subtract the corresponding nominal
+coordinate $p_{i,\mathrm{proj}}$ and divide by the programmed block length $L_b$
+when expressing the error as a percentage. Block 2 uses the arc length.
+\[
+  e_i=p_{i,\mathrm{enc}}-p_{i,\mathrm{proj}},
+  \qquad e_{i,\%}=100\frac{e_i}{L_b}.
+\]
+The projection measures geometric deviation from the contour. Estimating
+time-synchronized tracking error would require the interpolated controller setpoints.
+\par
+\repofile{position_error.py}{Error calculation code} \enspace$\cdot$\enspace
+\repofile{outputs/position_error.csv}{Per-sample error CSV} \enspace$\cdot$\enspace
+\repofile{OUTCOMES.md\#x-position-error}{X peak table} \enspace$\cdot$\enspace
+\repofile{OUTCOMES.md\#y-position-error}{Y peak table}
+
+\section{Engineering conclusions}
+\begin{itemize}
+  \item The two encoder traces show similar XY contour errors. Which run has the
+    larger peak varies by axis and block. These recordings show no consistent
+    increase in contour error during material removal.
+  \item Small ripples appear on the arc and the two diagonal moves (blocks 2, 5,
+    and 6). Across both runs their peak-to-peak errors range from $0.5$ to
+    $1.1~\mu\mathrm{m}$ over the middle 80\% of those blocks.
+  \item \textbf{19 of 28 per-axis peaks occur at block starts}, at the first encoder sample assigned to the new block. The errors generally return toward zero after these peaks.
+  \item All absolute component errors are below \textbf{0.3\% of programmed
+    block length} in the two runs.
+\end{itemize}
+
+
+\section{Comparison with colleagues}
+\vspace{44mm}
+
+\section*{AI usage}
+\hyperlink{tasks}{\texttt{TODO.md}} specified the tasks. OpenAI's GPT-6 model through Codex generated
+supporting material for the analysis and report. \hyperlink{outcomes}{\texttt{OUTCOMES.md}} recorded the
+results. The author, \authorprofile, reviewed and approved all included material.
+
+\section*{References}
+{\small
+\hypertarget{slides}{Anna Carla Araujo}, INSA Toulouse, \emph{Assignment 2: Interpolation and measuring
+positions}, slides 3--4 and 8.
+\repofile{assets/Assignment\%202\%20-\%20Slides.pdf}{Course slides}\par
+Paolo Rossi, \emph{Assignment 2 analysis}.
+\href{\assignmenturl}{Repository} \enspace$\cdot$\enspace
+\hypertarget{tasks}{\repofile{TODO.md}{Task instructions}} \enspace$\cdot$\enspace \hypertarget{outcomes}{\repofile{OUTCOMES.md}{Analysis outcomes}}
+}
+\end{document}
