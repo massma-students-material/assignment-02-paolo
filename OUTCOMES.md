@@ -170,3 +170,18 @@ The [position error plot](./plots/position_error.png) shows the following trends
   the programmed block length**. The largest absolute component errors are
   **28.86 µm** with material removal (X, block 2) and **28.27 µm** without
   material removal (Y, block 4).
+
+## Point 6 - Comparison with the Toulouse analysis
+
+The main difference between the two analyses is how we calculate the X and Y
+errors. Sirven and Pascal compare the measured cutting path directly with the
+measured no-cutting path. For each segment, they average the absolute difference
+along each axis between corresponding points on the two paths.
+[Sirven and Pascal, pp. 11–12, §V](tmp/SIRVEN_PASCAL_Rapport_Monitoring.pdf)
+
+In my analysis, I compare each measured path with the programmed contour. For
+each encoder sample, I find the closest point on the programmed segment or arc
+and calculate the signed X and Y deviations from that point. I then compare
+these geometric deviations between the cutting and no-cutting runs.
+[Rossi, pp. 4–5, §4](report/assignment_2_PAOLO_ROSSI.pdf)
+

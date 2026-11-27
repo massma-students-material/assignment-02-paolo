@@ -208,7 +208,13 @@ time-synchronized tracking error would require the interpolated controller setpo
 
 
 \section{Comparison with colleagues}
-\vspace{44mm}
+The main difference is how we calculate the X and Y errors. My colleagues in
+Group 2 in Toulouse compare the measured cutting and no-cutting paths directly.
+For each segment and axis, they average the absolute differences between
+corresponding positions on the two paths. I compare each run with the programmed
+contour. For each encoder sample, I calculate the signed X and Y deviations
+from the closest point on the programmed segment or arc, then compare these
+deviations between the cutting and no-cutting runs.
 
 \section*{AI usage}
 \hyperlink{tasks}{\texttt{TODO.md}} specified the tasks. OpenAI's GPT-6 model through Codex generated
